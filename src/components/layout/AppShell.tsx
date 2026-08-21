@@ -13,7 +13,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { to: '/periodos', label: 'Períodos', icon: Calendar },
   { to: '/cargar', label: 'Cargar Archivos', icon: Upload },
-  { to: '/resultados', label: 'Resultados', icon: BarChart2, adminOnly: true },
+  { to: '/resultados', label: 'Resultados', icon: BarChart2 },
   { to: '/factura', label: 'Factura', icon: FileText, adminOnly: true },
 ]
 

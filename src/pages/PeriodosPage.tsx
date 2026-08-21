@@ -2,45 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useCreatePeriodo, useListPeriodos } from '@/hooks/usePeriodos'
 import { toast } from '@/lib/toast'
-import type { EstadoPeriodo } from '@/types'
+import { formatPeriodo, MESES_ES } from '@/lib/meses'
+import { ESTADO_BADGE } from '@/lib/estado'
+import { currencyFormatter, integerFormatter } from '@/lib/format'
 import { Button } from '@/components/ui/button'
-import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Dialog, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-
-const MESES = [
-  'Enero',
-  'Febrero',
-  'Marzo',
-  'Abril',
-  'Mayo',
-  'Junio',
-  'Julio',
-  'Agosto',
-  'Septiembre',
-  'Octubre',
-  'Noviembre',
-  'Diciembre',
-]
-
-const ESTADO_BADGE: Record<EstadoPeriodo, { label: string; variant: BadgeProps['variant'] }> = {
-  borrador: { label: 'Borrador', variant: 'muted' },
-  en_revision: { label: 'En revisión', variant: 'warning' },
-  cerrado: { label: 'Cerrado', variant: 'success' },
-}
-
-const currencyFormatter = new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
-})
-
-const integerFormatter = new Intl.NumberFormat('es-MX')
-
-function formatPeriodo(mes: number, anio: number) {
-  return `${MESES[mes - 1]} ${anio}`
-}
 
 interface FormState {
   mes: number
@@ -91,7 +61,7 @@ export default function PeriodosPage() {
         onError: (error) => {
           if (error.code === UNIQUE_VIOLATION) {
             setDialogError(
-              `Ya existe un período para ${MESES[form.mes - 1]} ${form.anio}. No se pueden crear períodos duplicados.`
+              `Ya existe un período para ${MESES_ES[form.mes - 1]} ${form.anio}. No se pueden crear períodos duplicados.`
             )
             return
           }
@@ -196,7 +166,7 @@ export default function PeriodosPage() {
                 onChange={(event) => setForm((prev) => ({ ...prev, mes: Number(event.target.value) }))}
                 className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
-                {MESES.map((nombre, index) => (
+                {MESES_ES.map((nombre, index) => (
                   <option key={nombre} value={index + 1}>
                     {nombre}
                   </option>

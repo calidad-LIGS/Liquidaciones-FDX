@@ -5,6 +5,8 @@ import LoginPage from '@/components/auth/LoginPage'
 import ProtectedRoute from '@/components/auth/ProtectedRoute'
 import AppShell from '@/components/layout/AppShell'
 import PeriodosPage from '@/pages/PeriodosPage'
+import CargarArchivosPage from '@/pages/CargarArchivosPage'
+import ResultadosPage from '@/pages/ResultadosPage'
 import { Toaster } from '@/components/ui/toaster'
 
 function App() {
@@ -22,10 +24,10 @@ function App() {
           }
         >
           <Route path="/periodos" element={<PeriodosPage />} />
-          <Route path="/cargar" element={<div>Cargar Archivos</div>} />
+          <Route path="/cargar" element={<CargarArchivosPage />} />
+          <Route path="/resultados" element={<ResultadosPage />} />
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-            <Route path="/resultados" element={<div>Resultados</div>} />
             <Route path="/factura" element={<div>Factura</div>} />
           </Route>
         </Route>
