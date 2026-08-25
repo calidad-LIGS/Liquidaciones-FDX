@@ -33,6 +33,7 @@ export type TipoCalculo =
 export interface ConceptoFacturable {
   id: string
   orden: number
+  codigo: string
   descripcion: string
   tipo_calculo: TipoCalculo
   precio_unitario: number
@@ -46,5 +47,14 @@ export interface ResultadoCalculo {
   precio_aplicado: number
   override_admin: boolean
   updated_by: string | null
+  calculado_at: string | null
   updated_at: string
+}
+
+export interface TramoPrecio {
+  id: string
+  concepto_id: string
+  guia_min: number
+  guia_max: number | null
+  precio_unitario: number
 }

@@ -93,6 +93,37 @@ export interface RectificacionesRow {
   costo: number | null
 }
 
+export interface ReporteRow {
+  referencia: string
+  numero_pedimento: string
+  tipo: string
+  capturista: string
+  clave: string
+  cliente: string
+  fecha_entrada: string | null
+  fecha_salida: string | null
+  coves: number
+  etiquetas: number
+  partidas: number
+  guias: number
+  bultos: number
+  t_op: string
+  dpa: string
+  num_guias_urgente: number
+  num_guias_extraordinarias: number
+  costo: number
+  diferencias: number
+  adicionales: number
+  coves_aa: number
+  guias_urgentes: number
+  guias_extraordinarias_ind_cons: number
+  guias_extraordinarias_globales: number
+  impuestos: number
+  total: number
+  servicio_extraordinario: string
+  servicio_extraordinario_7pm: string
+}
+
 export interface ParsedTablaLiqFDX {
   comercializadoras: ComercializadorasRow[]
   etiquetas: EtiquetasRow[]
@@ -325,6 +356,45 @@ function parseRectificaciones(workbook: WorkBook): RectificacionesRow[] {
     salida: parseDateValue(get('SALIDA')),
     costo: parseCurrency(get('COSTO')),
   }))
+}
+
+function parseReporteSheet(workbook: WorkBook): ReporteRow[] {
+  return mapSheet(workbook, 'Reporte del Sistema', 'REFRENCIA', (get) => ({
+    referencia: toStringOrEmpty(get('REFRENCIA')),
+    numero_pedimento: toStringOrEmpty(get('NUMERO PEDIMENTO')),
+    tipo: toStringOrEmpty(get('TIPO')),
+    capturista: toStringOrEmpty(get('CAPTURISTA')),
+    clave: toStringOrEmpty(get('CLAVE')),
+    cliente: toStringOrEmpty(get('CLIENTE')),
+    fecha_entrada: parseDateValue(get('F Entrada')),
+    fecha_salida: parseDateValue(get('F Salida')),
+    coves: parseIntLoose(get('COVES')) ?? 0,
+    etiquetas: parseIntLoose(get('ETIQUETAS')) ?? 0,
+    partidas: parseIntLoose(get('PARTIDAS')) ?? 0,
+    guias: parseIntLoose(get('GUIAS')) ?? 0,
+    bultos: parseIntLoose(get('BULTOS')) ?? 0,
+    t_op: toStringOrEmpty(get('T OP')),
+    dpa: toStringOrEmpty(get('DPA')),
+    num_guias_urgente: parseIntLoose(get('Nº GUIAS URGENTE')) ?? 0,
+    num_guias_extraordinarias: parseIntLoose(get('Nº GUIAS EXTRAORDINARIAS')) ?? 0,
+    costo: parseCurrency(get('COSTO')) ?? 0,
+    diferencias: parseCurrency(get('DIFERENCIAS')) ?? 0,
+    adicionales: parseCurrency(get('ADICIONALES')) ?? 0,
+    coves_aa: parseIntLoose(get('COVES AA')) ?? 0,
+    guias_urgentes: parseIntLoose(get('GUIAS URGENTES')) ?? 0,
+    guias_extraordinarias_ind_cons: parseIntLoose(get('GUIAS EXTRAORDINARIAS IND/CONS')) ?? 0,
+    guias_extraordinarias_globales: parseIntLoose(get('GUIAS EXTRAORDINARIAS GLOBALES')) ?? 0,
+    impuestos: parseCurrency(get('IMPUESTOS')) ?? 0,
+    total: parseCurrency(get('TOTAL')) ?? 0,
+    servicio_extraordinario: toStringOrEmpty(get('Servicio Extraordinario')),
+    servicio_extraordinario_7pm: toStringOrEmpty(get('Servicio Extraordinario 7pm')),
+  }))
+}
+
+export async function parseReporteDelSistema(file: File): Promise<ReporteRow[]> {
+  const buffer = await file.arrayBuffer()
+  const workbook = XLSX.read(buffer, { type: 'array' })
+  return parseReporteSheet(workbook)
 }
 
 export async function parseTablaLiqFDX(file: File): Promise<ParsedTablaLiqFDX> {

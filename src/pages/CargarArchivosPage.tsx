@@ -32,34 +32,18 @@ function getSheetDisplayCount(sheet: SheetStatus, parsedData: ParsedTablaLiqFDX 
   return { count: sheet.rowCount, label: 'filas' }
 }
 
-export default function CargarArchivosPage() {
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const { data: periodos, isLoading: isLoadingPeriodos } = useListPeriodos()
-  const {
-    selectedPeriodoId,
-    setSelectedPeriodoId,
-    parsedData,
-    parseFile,
-    insertData,
-    checkExistingData,
-    reset,
-    sheetStatuses,
-    isInserting,
-  } = useCargarArchivos()
+interface UploadZoneProps {
+  title: string
+  dropLabel: string
+  onProcess: (file: File) => Promise<unknown>
+  statusLabel: string | null
+}
 
+function UploadZone({ title, dropLabel, onProcess, statusLabel }: UploadZoneProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [isParsing, setIsParsing] = useState(false)
-  const [isCheckingExisting, setIsCheckingExisting] = useState(false)
-  const [isReplaceConfirmOpen, setIsReplaceConfirmOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    if (selectedPeriodoId) return
-    const fromUrl = searchParams.get('periodo')
-    if (fromUrl) setSelectedPeriodoId(fromUrl)
-  }, [searchParams, selectedPeriodoId, setSelectedPeriodoId])
 
   const handleDrop = (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault()
@@ -72,13 +56,85 @@ export default function CargarArchivosPage() {
     if (!selectedFile) return
     setIsParsing(true)
     try {
-      await parseFile(selectedFile)
+      await onProcess(selectedFile)
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'No se pudo procesar el archivo.')
     } finally {
       setIsParsing(false)
     }
   }
+
+  return (
+    <div className="space-y-3">
+      <h2 className="font-heading text-base font-semibold text-foreground">{title}</h2>
+
+      <div
+        onDragOver={(event) => {
+          event.preventDefault()
+          setIsDragging(true)
+        }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => fileInputRef.current?.click()}
+        className={cn(
+          'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors',
+          isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card'
+        )}
+      >
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx"
+          className="hidden"
+          onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
+        />
+        {selectedFile ? (
+          <p className="text-sm text-foreground">{selectedFile.name}</p>
+        ) : (
+          <>
+            <p className="text-sm text-foreground">{dropLabel}</p>
+            <p className="text-sm text-muted-foreground">o haz clic para seleccionar un archivo .xlsx</p>
+          </>
+        )}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button onClick={handleProcess} disabled={!selectedFile || isParsing}>
+          {isParsing ? 'Procesando…' : 'Procesar archivo'}
+        </Button>
+        {statusLabel && <Badge variant="success">{statusLabel}</Badge>}
+      </div>
+    </div>
+  )
+}
+
+export default function CargarArchivosPage() {
+  const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { data: periodos, isLoading: isLoadingPeriodos } = useListPeriodos()
+  const {
+    selectedPeriodoId,
+    setSelectedPeriodoId,
+    parsedData,
+    reporteData,
+    parseFile,
+    parseReporteFile,
+    insertData,
+    checkExistingData,
+    reset,
+    sheetStatuses,
+    isInserting,
+  } = useCargarArchivos()
+
+  const [isCheckingExisting, setIsCheckingExisting] = useState(false)
+  const [isReplaceConfirmOpen, setIsReplaceConfirmOpen] = useState(false)
+  const [resetCounter, setResetCounter] = useState(0)
+
+  useEffect(() => {
+    if (selectedPeriodoId) return
+    const fromUrl = searchParams.get('periodo')
+    if (fromUrl) setSelectedPeriodoId(fromUrl)
+  }, [searchParams, selectedPeriodoId, setSelectedPeriodoId])
 
   const handleConfirmInsert = async () => {
     if (!selectedPeriodoId) return
@@ -105,14 +161,22 @@ export default function CargarArchivosPage() {
 
   const handleReset = () => {
     reset()
-    setSelectedFile(null)
-    setIsDragging(false)
-    setIsParsing(false)
-    if (fileInputRef.current) fileInputRef.current.value = ''
+    setResetCounter((c) => c + 1)
   }
 
   const insertSucceeded =
     !isInserting && sheetStatuses.length > 0 && sheetStatuses.every((s) => s.status === 'success')
+
+  const bothFilesReady = !!parsedData && !!reporteData
+  const confirmDisabledReason = !selectedPeriodoId
+    ? 'Selecciona un período'
+    : !parsedData && !reporteData
+      ? 'Procesa ambos archivos primero'
+      : !parsedData
+        ? 'Falta procesar el archivo TablaLiqFDX'
+        : !reporteData
+          ? 'Falta procesar el archivo Reporte del Sistema'
+          : undefined
 
   return (
     <div className="space-y-6">
@@ -166,43 +230,25 @@ export default function CargarArchivosPage() {
         </div>
       ) : (
         <>
-          <div className="space-y-3">
-            <div
-              onDragOver={(event) => {
-                event.preventDefault()
-                setIsDragging(true)
-              }}
-              onDragLeave={() => setIsDragging(false)}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={cn(
-                'flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed px-6 py-10 text-center transition-colors',
-                isDragging ? 'border-primary bg-primary/5' : 'border-border bg-card'
-              )}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".xlsx"
-                className="hidden"
-                onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-              />
-              {selectedFile ? (
-                <p className="text-sm text-foreground">{selectedFile.name}</p>
-              ) : (
-                <>
-                  <p className="text-sm text-foreground">Arrastra el archivo TablaLiqFDX aquí</p>
-                  <p className="text-sm text-muted-foreground">o haz clic para seleccionar un archivo .xlsx</p>
-                </>
-              )}
-            </div>
+          <div className="space-y-8">
+            <UploadZone
+              key={`tabla-${resetCounter}`}
+              title="TablaLiqFDX"
+              dropLabel="Arrastra el archivo TablaLiqFDX aquí"
+              onProcess={parseFile}
+              statusLabel={parsedData ? `${parsedData.comercializadoras.length + parsedData.etiquetas.length + parsedData.art40.length + parsedData.pasajeros.length + parsedData.fis.length + parsedData.dpa.length + parsedData.hallazgos.length + parsedData.rectificaciones.length} filas en 8 hojas` : null}
+            />
 
-            <Button onClick={handleProcess} disabled={!selectedFile || isParsing}>
-              {isParsing ? 'Procesando…' : 'Procesar archivo'}
-            </Button>
+            <UploadZone
+              key={`reporte-${resetCounter}`}
+              title="Reporte del Sistema"
+              dropLabel="Arrastra el archivo Reporte del Sistema aquí"
+              onProcess={parseReporteFile}
+              statusLabel={reporteData ? `${reporteData.length} filas` : null}
+            />
           </div>
 
-          {parsedData && (
+          {(parsedData || reporteData) && (
             <div className="rounded-xl border border-border bg-card p-4">
               <h2 className="mb-3 font-heading text-base font-semibold text-foreground">Hojas</h2>
 
@@ -232,7 +278,8 @@ export default function CargarArchivosPage() {
               <div className="mt-4 flex justify-end">
                 <Button
                   onClick={handleConfirmInsert}
-                  disabled={!selectedPeriodoId || isInserting || isCheckingExisting}
+                  disabled={!selectedPeriodoId || !bothFilesReady || isInserting || isCheckingExisting}
+                  title={confirmDisabledReason}
                 >
                   {isInserting
                     ? 'Insertando…'

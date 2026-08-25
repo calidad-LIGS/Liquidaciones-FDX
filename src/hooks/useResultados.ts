@@ -74,6 +74,10 @@ export function useUpdateEstadoPeriodo() {
   return useUpdatePeriodo()
 }
 
+export function useUpdatePeriodoDatos() {
+  return useUpdatePeriodo()
+}
+
 export interface ResumenCarga {
   comercializadoras: number
   etiquetas: number

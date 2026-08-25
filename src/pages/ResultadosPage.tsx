@@ -5,6 +5,7 @@ import {
   ClipboardList,
   FileEdit,
   FileText,
+  Loader2,
   PackageCheck,
   Search,
   Tag,
@@ -17,14 +18,17 @@ import {
   useHojaData,
   useResultadosPeriodo,
   useResumenCarga,
+  useUpdatePeriodoDatos,
   useUpsertResultado,
   type ResumenCarga,
   type SheetTableKey,
 } from '@/hooks/useResultados'
+import { useRunCalculation } from '@/hooks/useCalculation'
 import { toast } from '@/lib/toast'
 import { formatPeriodo } from '@/lib/meses'
 import { ESTADO_BADGE } from '@/lib/estado'
 import { currencyFormatter, currencyFormatter4, formatDateShort, formatDateTime, integerFormatter } from '@/lib/format'
+import { cn } from '@/lib/utils'
 import type { AuthUser, Periodo, ResultadoCalculo } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -82,7 +86,11 @@ export default function ResultadosPage() {
       )}
 
       {periodo &&
-        (isAdmin ? <AdminView periodo={periodo} user={user} /> : <OperativoView periodo={periodo} user={user} />)}
+        (isAdmin ? (
+          <AdminView key={periodo.id} periodo={periodo} user={user} />
+        ) : (
+          <OperativoView key={periodo.id} periodo={periodo} user={user} />
+        ))}
     </div>
   )
 }
@@ -96,8 +104,12 @@ function AdminView({ periodo, user }: ViewProps) {
   const { data: conceptos, isLoading: isLoadingConceptos } = useConceptos()
   const { data: resultados } = useResultadosPeriodo(periodo.id)
   const upsertResultado = useUpsertResultado()
+  const updatePeriodoDatos = useUpdatePeriodoDatos()
+  const { runCalculation, isCalculating } = useRunCalculation(periodo.id)
 
   const [pendingEdits, setPendingEdits] = useState<Record<string, number>>({})
+  const [descuentoGuiasFis, setDescuentoGuiasFis] = useState(periodo.descuento_guias_fis ?? 0)
+  const [anticipoPeriodoAnterior, setAnticipoPeriodoAnterior] = useState(periodo.anticipo_periodo_anterior ?? 0)
 
   const resultadosByConcepto = useMemo(() => {
     const map = new Map<string, ResultadoCalculo>()
@@ -145,7 +157,32 @@ function AdminView({ periodo, user }: ViewProps) {
     }
   }
 
+  const handleCalcular = async () => {
+    try {
+      await runCalculation()
+      toast.success('Cálculo completado')
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'No se pudo completar el cálculo.')
+    }
+  }
+
+  const handleGuardarDatos = () => {
+    updatePeriodoDatos.mutate(
+      {
+        id: periodo.id,
+        descuento_guias_fis: descuentoGuiasFis,
+        anticipo_periodo_anterior: anticipoPeriodoAnterior,
+      },
+      {
+        onSuccess: () => toast.success('Datos guardados'),
+        onError: (error) => toast.error(error.message || 'No se pudieron guardar los datos.'),
+      }
+    )
+  }
+
   const hasPendingEdits = Object.keys(pendingEdits).length > 0
+  const hasResultados = (resultados?.length ?? 0) > 0
+  const totalAPagar = totals.total - periodo.anticipo_periodo_anterior
 
   return (
     <div className="space-y-6 pb-6">
@@ -241,6 +278,55 @@ function AdminView({ periodo, user }: ViewProps) {
         </div>
       )}
 
+      <div className="rounded-xl border border-border bg-surface p-4">
+        <h2 className="mb-4 font-heading text-base font-semibold text-foreground">Datos para facturación</h2>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="descuento-guias-fis">Descuento guías FIS</Label>
+            <Input
+              id="descuento-guias-fis"
+              type="number"
+              step="1"
+              value={descuentoGuiasFis}
+              onChange={(event) => {
+                const parsed = Math.trunc(Number(event.target.value))
+                setDescuentoGuiasFis(Number.isNaN(parsed) ? 0 : parsed)
+              }}
+              className="tabular-nums"
+            />
+            <p className="text-xs text-muted-foreground">Guías FIS del mes anterior con descuento aplicado</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="anticipo-periodo-anterior">Anticipo período anterior</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                $
+              </span>
+              <Input
+                id="anticipo-periodo-anterior"
+                type="number"
+                step="0.01"
+                value={anticipoPeriodoAnterior}
+                onChange={(event) => {
+                  const parsed = Number(event.target.value)
+                  setAnticipoPeriodoAnterior(Number.isNaN(parsed) ? 0 : parsed)
+                }}
+                className="pl-7 tabular-nums"
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">Monto pagado como anticipo en el período anterior</p>
+          </div>
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <Button onClick={handleGuardarDatos} disabled={updatePeriodoDatos.isPending}>
+            {updatePeriodoDatos.isPending ? 'Guardando…' : 'Guardar datos'}
+          </Button>
+        </div>
+      </div>
+
       <div className="rounded-xl border border-border bg-card px-4 py-4">
         <div className="flex flex-wrap items-center justify-end gap-8">
           <div className="text-sm">
@@ -259,8 +345,24 @@ function AdminView({ periodo, user }: ViewProps) {
               {currencyFormatter.format(totals.total)}
             </span>
           </div>
-          <Button variant="outline" disabled title="Próximamente">
-            Calcular
+          <div className="text-sm">
+            <span className="text-muted-foreground">Anticipo período anterior: </span>
+            <span
+              className={cn(
+                'tabular-nums font-medium',
+                periodo.anticipo_periodo_anterior > 0 ? 'text-destructive' : 'text-foreground'
+              )}
+            >
+              {currencyFormatter.format(-periodo.anticipo_periodo_anterior)}
+            </span>
+          </div>
+          <div className="text-base">
+            <span className="text-muted-foreground">Total a pagar: </span>
+            <span className="tabular-nums font-bold text-foreground">{currencyFormatter.format(totalAPagar)}</span>
+          </div>
+          <Button variant="outline" onClick={handleCalcular} disabled={isCalculating}>
+            {isCalculating && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+            {isCalculating ? 'Calculando…' : hasResultados ? 'Recalcular' : 'Calcular'}
           </Button>
         </div>
       </div>
