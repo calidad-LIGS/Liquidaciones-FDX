@@ -58,3 +58,14 @@ export interface TramoPrecio {
   guia_max: number | null
   precio_unitario: number
 }
+
+export interface Factura {
+  id: string
+  periodo_id: string
+  subtotal: number
+  iva: number
+  total: number
+  anticipo_aplicado: number
+  total_a_pagar: number
+  created_at: string
+}

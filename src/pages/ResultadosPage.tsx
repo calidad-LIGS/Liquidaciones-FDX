@@ -101,6 +101,7 @@ interface ViewProps {
 }
 
 function AdminView({ periodo, user }: ViewProps) {
+  const navigate = useNavigate()
   const { data: conceptos, isLoading: isLoadingConceptos } = useConceptos()
   const { data: resultados } = useResultadosPeriodo(periodo.id)
   const upsertResultado = useUpsertResultado()
@@ -364,6 +365,11 @@ function AdminView({ periodo, user }: ViewProps) {
             {isCalculating && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             {isCalculating ? 'Calculando…' : hasResultados ? 'Recalcular' : 'Calcular'}
           </Button>
+          {hasResultados && (
+            <Button variant="secondary" onClick={() => navigate(`/factura?periodo=${periodo.id}`)}>
+              Ir a Factura →
+            </Button>
+          )}
         </div>
       </div>
     </div>
