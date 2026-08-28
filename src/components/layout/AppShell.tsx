@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router-dom'
-import { BarChart2, Calendar, FileText, LogOut, Upload } from 'lucide-react'
+import { BarChart2, Calendar, FileText, LogOut, Settings, Upload } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
@@ -14,6 +14,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/periodos', label: 'Períodos', icon: Calendar },
   { to: '/cargar', label: 'Cargar Archivos', icon: Upload },
   { to: '/resultados', label: 'Resultados', icon: BarChart2 },
+  { to: '/catalogo', label: 'Catálogo', icon: Settings, adminOnly: true },
   { to: '/factura', label: 'Factura', icon: FileText, adminOnly: true },
 ]
 

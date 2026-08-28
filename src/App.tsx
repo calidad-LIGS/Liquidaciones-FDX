@@ -8,6 +8,7 @@ import PeriodosPage from '@/pages/PeriodosPage'
 import CargarArchivosPage from '@/pages/CargarArchivosPage'
 import ResultadosPage from '@/pages/ResultadosPage'
 import FacturaPage from '@/pages/FacturaPage'
+import CatalogoPage from '@/pages/CatalogoPage'
 import { Toaster } from '@/components/ui/toaster'
 
 function App() {
@@ -29,6 +30,7 @@ function App() {
           <Route path="/resultados" element={<ResultadosPage />} />
 
           <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route path="/catalogo" element={<CatalogoPage />} />
             <Route path="/factura" element={<FacturaPage />} />
           </Route>
         </Route>

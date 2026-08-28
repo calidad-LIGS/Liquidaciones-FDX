@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 import { useListPeriodos } from '@/hooks/usePeriodos'
 import { useCargarArchivos, type SheetStatus, type SheetStatusState } from '@/hooks/useCargarArchivos'
+import { downloadReporteSistemaTemplate, downloadTablaLiqFDXTemplate } from '@/lib/templateGenerator'
 import { toast } from '@/lib/toast'
 import { formatPeriodo } from '@/lib/meses'
 import { cn } from '@/lib/utils'
@@ -181,6 +182,21 @@ export default function CargarArchivosPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-semibold text-foreground">Cargar Archivos</h1>
+
+      <div className="rounded-xl border border-border bg-card p-4">
+        <h2 className="mb-3 font-heading text-base font-semibold text-foreground">Plantillas</h2>
+        <div className="flex flex-wrap gap-3">
+          <Button variant="outline" onClick={downloadTablaLiqFDXTemplate}>
+            ⬇ Plantilla TablaLiqFDX
+          </Button>
+          <Button variant="outline" onClick={downloadReporteSistemaTemplate}>
+            ⬇ Plantilla Reporte del Sistema
+          </Button>
+        </div>
+        <p className="mt-3 text-sm text-muted-foreground">
+          Descarga las plantillas para preparar los archivos de carga
+        </p>
+      </div>
 
       <div className="max-w-xs space-y-2">
         <Label htmlFor="periodo-select">Período</Label>

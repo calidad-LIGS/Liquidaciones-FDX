@@ -12,6 +12,7 @@ import {
   type FacturaData,
 } from '@/hooks/useFactura'
 import { buildFacturaLineItems, calculateFacturaTotals, generateFacturaPDF } from '@/lib/pdfGenerator'
+import { generateFacturaExcel } from '@/lib/excelExporter'
 import { toast } from '@/lib/toast'
 import { formatPeriodo, MESES_ES } from '@/lib/meses'
 import { ESTADO_BADGE } from '@/lib/estado'
@@ -147,6 +148,16 @@ function FacturaView({ data }: { data: FacturaData }) {
       setIsGenerarDialogOpen(false)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'No se pudo generar la factura.')
+    }
+  }
+
+  const handleDescargarExcel = async () => {
+    try {
+      const excelItems = buildFacturaLineItems(conceptos, resultados, tramos, { includeZeroRows: true })
+      await generateFacturaExcel(periodo, excelItems, totals)
+      toast.success('Excel generado')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'No se pudo generar el Excel.')
     }
   }
 
@@ -328,6 +339,10 @@ function FacturaView({ data }: { data: FacturaData }) {
           >
             {isProcessingFactura && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
             {periodo.estado === 'cerrado' ? 'Período cerrado' : 'Generar PDF'}
+          </Button>
+
+          <Button variant="outline" className="w-full" onClick={handleDescargarExcel} disabled={!hasResultados}>
+            Descargar Excel
           </Button>
 
           {periodo.estado === 'cerrado' && isAdmin && (

@@ -37,6 +37,7 @@ export interface ConceptoFacturable {
   descripcion: string
   tipo_calculo: TipoCalculo
   precio_unitario: number
+  activo: boolean
 }
 
 export interface ResultadoCalculo {
